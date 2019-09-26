@@ -1,42 +1,38 @@
 import React from "react";
-import ReactDOM from "react-dom";
 import { Machine } from "xstate";
 import { createModel } from "@xstate/test";
-
 import { render, fireEvent } from "@testing-library/react";
-
-import App from "./App";
+import App, { todosMachineConfig } from "./App";
 
 describe("App", () => {
-  const todosMachine = Machine({
-    id: "todosApp",
-    initial: "list",
-    states: {
-      add: {
-        on: {
-          CANCEL_ADD: "list",
-          CREATE_TODO: "list"
-        },
-        meta: {
-          test: ({ getByText }) => {
-            expect(getByText("Create Todo")).toBeTruthy();
-          }
-        }
-      },
-      list: {
-        on: {
-          ADD_TODO: "add"
-        },
-        meta: {
-          test: ({ getByText }) => {
-            expect(getByText("Add Todo")).toBeTruthy();
-          }
-        }
+  todosMachineConfig.states.idle.meta = {
+    test: ({ getByText }) => {
+      expect(getByText("Loading...")).toBeTruthy();
+    }
+  };
+
+  todosMachineConfig.states.list.meta = {
+    test: ({ getByText, container }) => {
+      expect(getByText("Add Todo")).toBeTruthy();
+      expect(container.getElementsByTagName("img")).toBeTruthy();
+    }
+  };
+
+  todosMachineConfig.states.add.meta = {
+    test: ({ getByText }) => {
+      expect(getByText("Create Todo")).toBeTruthy();
+    }
+  };
+
+  const todosMachine = Machine(todosMachineConfig);
+
+  const todoModel = createModel(todosMachine, {
+    done: {
+      invoke: {
+        fetchCatFacts: () => {}
       }
     }
-  });
-
-  const todoModel = createModel(todosMachine).withEvents({
+  }).withEvents({
     ADD_TODO: ({ getByText }) => {
       fireEvent.click(getByText("Add Todo"));
     },
@@ -52,9 +48,9 @@ describe("App", () => {
     }
   });
 
-  const testPlans = todoModel.getShortestPathPlans();
-
   describe("adding a todo", () => {
+    const testPlans = todoModel.getSimplePathPlans();
+
     testPlans.forEach(plan => {
       describe(plan.description, () => {
         plan.paths.forEach(path => {
